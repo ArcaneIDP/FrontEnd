@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid } from "recharts";
+import { useSupabaseData } from "../hooks/useSupabaseData";
 
 // --- Quick notes ---
 // One-file, drop-in React dashboard for your hackathon demo.
@@ -238,8 +239,39 @@ export default function AgentIdpDashboard() {
   const [query, setQuery] = useState("");
   const [agent, setAgent] = useState<string | "ALL">("ALL");
   const [detail, setDetail] = useState<any | null>(null);
-  const [requests, setRequests] = useState(MOCK_TOKEN_REQUESTS);
   const [attackActive, setAttackActive] = useState(false);
+  
+  // Fetch data from Supabase (falls back to mock if not configured)
+  const { tokenRequests, signinAttempts, agents, useMockData, refreshData } = useSupabaseData();
+  
+  // Use Supabase data if available, otherwise use mock data
+  const [requests, setRequests] = useState<any[]>([]);
+  const [signinAttemptsList, setSigninAttemptsList] = useState<any[]>([]);
+  const [availableAgents, setAvailableAgents] = useState<any[]>([]);
+  
+  useEffect(() => {
+    if (!useMockData && tokenRequests.length > 0) {
+      setRequests(tokenRequests);
+    } else if (useMockData) {
+      setRequests(MOCK_TOKEN_REQUESTS);
+    }
+  }, [tokenRequests, useMockData]);
+  
+  useEffect(() => {
+    if (!useMockData && signinAttempts.length > 0) {
+      setSigninAttemptsList(signinAttempts);
+    } else if (useMockData) {
+      setSigninAttemptsList(MOCK_SIGNIN_ATTEMPTS);
+    }
+  }, [signinAttempts, useMockData]);
+  
+  useEffect(() => {
+    if (!useMockData && agents.length > 0) {
+      setAvailableAgents(agents);
+    } else if (useMockData) {
+      setAvailableAgents(MOCK_AGENTS);
+    }
+  }, [agents, useMockData]);
 
   function simulateAttack() {
     // toggle attack: when activated, prepend a few malicious requests to the stream
@@ -366,21 +398,22 @@ else DENY`
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">AI Agent IDP Control Plane</h1>
             <p className="text-sm text-indigo-200/80 mt-1">
               30-second, purpose-scoped tokens * Just-in-time access * Full audit trail
+              {useMockData ? ' [Mock Data Mode]' : ' [Live from Supabase]'}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <select
-              value={agent}
-              onChange={(e) => setAgent(e.target.value as any)}
-              className="border border-indigo-500/30 rounded-xl px-3 py-2 bg-slate-900/40 text-indigo-100 placeholder-indigo-300/50 backdrop-blur"
-            >
-              <option value="ALL">All agents</option>
-              {MOCK_AGENTS.map((a) => (
-                <option key={a.id} value={a.name}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
+              <select
+                value={agent}
+                onChange={(e) => setAgent(e.target.value as any)}
+                className="border border-indigo-500/30 rounded-xl px-3 py-2 bg-slate-900/40 text-indigo-100 placeholder-indigo-300/50 backdrop-blur"
+              >
+                <option value="ALL">All agents</option>
+                {availableAgents.map((a) => (
+                  <option key={a.id} value={a.name}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
             <input
               placeholder="Search reason, resource, id..."
               value={query}
@@ -395,6 +428,15 @@ else DENY`
             >
               {attackActive ? 'Stop Attack' : 'Play Attack'}
             </button>
+            {useMockData && (
+              <button
+                onClick={() => window.location.reload()}
+                className="ml-2 px-3 py-2 rounded-xl text-sm font-medium border bg-yellow-600 text-white border-yellow-700"
+                title="Refresh to load Supabase data"
+              >
+                🔄 Refresh Data
+              </button>
+            )}
           </div>
         </div>
 
@@ -510,7 +552,7 @@ else DENY`
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_SIGNIN_ATTEMPTS.map((s) => (
+                  {signinAttemptsList.map((s) => (
                     <tr key={s.id} className="border-t border-indigo-500/20">
                       <td className="py-2">{new Date(s.ts).toLocaleTimeString()}</td>
                       <td>

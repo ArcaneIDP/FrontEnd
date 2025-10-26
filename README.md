@@ -18,19 +18,24 @@ A beautiful, real-time dashboard for monitoring AI agent identity and access con
 npm install
 ```
 
-### Setup Environment
+### Setup Environment with Supabase
 
 Create a `.env` file in the root directory:
 
 ```bash
-cp .env.example .env
+# Create .env file
+cat > .env << 'EOF'
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+EOF
 ```
 
-Update `.env` with your backend API URL:
-```
-VITE_API_BASE_URL=http://localhost:3000
-VITE_WS_URL=ws://localhost:3000
-```
+**Get your Supabase credentials:**
+1. Go to https://supabase.com/dashboard
+2. Select your project
+3. Go to Settings → API
+4. Copy the "Project URL" → `VITE_SUPABASE_URL`
+5. Copy the "anon public" key → `VITE_SUPABASE_ANON_KEY`
 
 ### Run the Development Server
 
@@ -70,42 +75,33 @@ src/
 └── index.css                   # TailwindCSS styles
 ```
 
-## Customization
+## Database Schema
 
-### Connecting to Your Backend
+This dashboard connects to Supabase and uses the following tables:
 
-The dashboard uses mock data by default. To connect to your backend:
+- **`ephemeral_tokens`** - Token requests/just-in-time access tokens
+- **`audit_logs`** - Authentication and API access logs  
+- **`data_sources`** - Data sources (shown as "agents" in the UI)
+- **`global_tokens`** - Global authentication tokens
+- **`user_api_tokens`** - User API tokens
 
-1. **Set up environment variables**:
-   - Create a `.env` file in the root directory
-   - Add your backend API URL: `VITE_API_BASE_URL=https://your-backend.com`
-   - Add WebSocket URL if using live updates: `VITE_WS_URL=wss://your-backend.com`
+The dashboard automatically maps these tables to the UI:
+- Ephemeral tokens → "Live token requests"
+- Audit logs → "Auth attempts"
+- Data sources → "Agents" filter dropdown
 
-2. **Replace mock data with API calls**:
-   - Import the API helpers: `import { apiClient } from './utils/api'`
-   - Use `useEffect` to fetch data on mount:
-   ```typescript
-   useEffect(() => {
-     const loadData = async () => {
-       const data = await apiClient.fetchTokenRequests();
-       setRequests(data);
-     };
-     loadData();
-   }, []);
-   ```
+## Connecting to Your Supabase Database
 
-3. **Add WebSocket support for live updates**:
-   - Import the WebSocket helper: `import { setupWebSocket } from './utils/api'`
-   - Set up connection in `useEffect`:
-   ```typescript
-   useEffect(() => {
-     const ws = setupWebSocket((data) => {
-       // Handle live updates
-       setRequests(prev => [data, ...prev]);
-     });
-     return () => ws.close();
-   }, []);
-   ```
+The dashboard will automatically connect to Supabase when you add your credentials to `.env`. If Supabase is not configured, it will fall back to mock data for demos.
+
+**Enable Realtime in Supabase:**
+1. Go to your Supabase Dashboard
+2. Database → Replication
+3. Enable replication for:
+   - `ephemeral_tokens`
+   - `audit_logs`
+
+This enables live updates when new data is inserted.
 
 ## Technologies
 
