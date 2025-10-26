@@ -35,7 +35,7 @@ export const apiClient = {
 
 // Example WebSocket usage
 export const setupWebSocket = (onMessage: (data: any) => void) => {
-  const ws = new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:3000/ws');
+  const ws = new WebSocket((import.meta as any).env.VITE_WS_URL || 'ws://localhost:3000/ws');
   
   ws.onopen = () => {
     console.log('WebSocket connected');

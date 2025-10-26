@@ -242,7 +242,7 @@ export default function AgentIdpDashboard() {
   const [attackActive, setAttackActive] = useState(false);
   
   // Fetch data from Supabase (falls back to mock if not configured)
-  const { tokenRequests, signinAttempts, agents, useMockData, refreshData } = useSupabaseData();
+  const { tokenRequests, signinAttempts, agents, useMockData } = useSupabaseData();
   
   // Use Supabase data if available, otherwise use mock data
   const [requests, setRequests] = useState<any[]>([]);
