@@ -240,10 +240,9 @@ export default function AgentIdpDashboard() {
   const [query, setQuery] = useState("");
   const [agent, setAgent] = useState<string | "ALL">("ALL");
   const [detail, setDetail] = useState<any | null>(null);
-  const [attackActive, setAttackActive] = useState(false);
   
   // Fetch data from Supabase (falls back to mock if not configured)
-  const { tokenRequests, signinAttempts, agents, useMockData, refreshData } = useSupabaseData();
+  const { tokenRequests, signinAttempts, agents, useMockData } = useSupabaseData();
   
   // Use Supabase data if available, otherwise use mock data
   const [requests, setRequests] = useState<any[]>([]);
@@ -301,82 +300,6 @@ export default function AgentIdpDashboard() {
 
     loadStats();
   }, [useMockData]);
-
-  function simulateAttack() {
-    // toggle attack: when activated, prepend a few malicious requests to the stream
-    if (attackActive) {
-      setAttackActive(false);
-      setRequests(MOCK_TOKEN_REQUESTS);
-      return;
-    }
-    setAttackActive(true);
-    const attacks = [
-      {
-        id: "atk-001",
-        ts: minutesAgo(0.1),
-        agent: "MaliciousAgent",
-        ttlSec: 5,
-        decision: "DENIED",
-        reason: "overscope wildcard + high egress",
-        ip: "203.0.113.5",
-        token: {
-          action: "READ",
-          resource_type: "object-store",
-          resource_id: "s3://prod/users/*",
-          justification: "exfiltrate PII",
-          columns: [],
-          row_filter: "*",
-          output_limit: { max_rows: 0, max_bytes: 0 },
-          egress_budget: { bytes: 100000000 },
-          replay_protection: { nonce: "atk1", one_time: false },
-          audit_tags: ["attack", "exfil"],
-        },
-      },
-      {
-        id: "atk-002",
-        ts: minutesAgo(0.2),
-        agent: "MaliciousAgent",
-        ttlSec: 5,
-        decision: "DENIED",
-        reason: "rate-limit bypass attempt",
-        ip: "203.0.113.6",
-        token: {
-          action: "POST",
-          resource_type: "api",
-          resource_id: "api://erp/journals:create",
-          justification: "mass writes",
-          idempotency_key: "",
-          rate_limit: { rpm: 10000, burst: 5000 },
-          egress_budget: { bytes: 10000000 },
-          replay_protection: { nonce: "atk2", one_time: false },
-          audit_tags: ["attack", "rw"],
-        },
-      },
-      {
-        id: "atk-003",
-        ts: minutesAgo(0.3),
-        agent: "MaliciousAgent",
-        ttlSec: 5,
-        decision: "BLOCKED",
-        reason: "unregistered client_id",
-        ip: "198.51.100.8",
-        token: {
-          action: "READ",
-          resource_type: "table",
-          resource_id: "db.users",
-          justification: "dump",
-          columns: ["email", "ssn", "phone"],
-          row_filter: "1=1",
-          output_limit: { max_rows: 100000, max_bytes: 100000000 },
-          mask_rules: [],
-          egress_budget: { bytes: 100000000 },
-          replay_protection: { nonce: "atk3", one_time: false },
-          audit_tags: ["attack", "data-dump"],
-        },
-      },
-    ];
-    setRequests((prev) => [...attacks, ...prev]);
-  }
 
   const filteredReqs = useMemo(() => {
     const q = query.toLowerCase();
@@ -449,23 +372,6 @@ else DENY`
               onChange={(e) => setQuery(e.target.value)}
               className="border border-indigo-500/30 rounded-xl px-3 py-2 bg-slate-900/40 text-indigo-100 placeholder-indigo-300/50 backdrop-blur w-56"
             />
-            <button
-              onClick={simulateAttack}
-              className={`ml-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                attackActive ? 'bg-rose-600 text-white border-rose-700' : 'bg-slate-900/50 text-indigo-100 border-indigo-500/30'
-              }`}
-            >
-              {attackActive ? 'Stop Attack' : 'Play Attack'}
-            </button>
-            {!useMockData && (
-              <button
-                onClick={() => refreshData()}
-                className="ml-2 px-3 py-2 rounded-xl text-sm font-medium border bg-green-600 text-white border-green-700"
-                title="Refresh data from Supabase"
-              >
-                🔄 Refresh
-              </button>
-            )}
           </div>
         </div>
 
