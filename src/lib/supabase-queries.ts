@@ -96,23 +96,23 @@ export async function fetchDataSources() {
   }));
 }
 
-// Get usage statistics for charts (resource usage over time)
+// Get usage statistics for charts (resource usage by scope from ephemeral_tokens)
 export async function fetchUsageStats() {
   if (!supabase) return [];
   
-  // Get count of requests per data_source
+  // Get count of requests per scope
   const { data: tokens, error } = await supabase
     .from('ephemeral_tokens')
-    .select('data_source_id, data_sources(name)')
+    .select('scope')
     .limit(100);
 
   if (error || !tokens) return [];
 
-  // Count usage per data source
+  // Count usage per scope
   const usageMap = new Map<string, number>();
   tokens.forEach(token => {
-    const sourceName = (token as any).data_sources?.name || 'Unknown';
-    usageMap.set(sourceName, (usageMap.get(sourceName) || 0) + 1);
+    const scope = token.scope || 'Unknown';
+    usageMap.set(scope, (usageMap.get(scope) || 0) + 1);
   });
 
   return Array.from(usageMap.entries()).map(([resource, calls]) => ({
@@ -121,24 +121,24 @@ export async function fetchUsageStats() {
   }));
 }
 
-// Get traffic statistics for the area chart
+// Get traffic statistics for the area chart (based on audit_logs)
 export async function fetchTrafficStats() {
   if (!supabase) return [];
 
-  // Get tokens grouped by creation time (last 60 minutes, 5-minute intervals)
-  const { data: tokens, error } = await supabase
-    .from('ephemeral_tokens')
-    .select('created_at, is_revoked')
-    .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
-    .order('created_at', { ascending: true })
+  // Get audit logs grouped by timestamp (last 60 minutes, 5-minute intervals)
+  const { data: logs, error } = await supabase
+    .from('audit_logs')
+    .select('timestamp, status_code')
+    .gte('timestamp', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+    .order('timestamp', { ascending: true })
     .limit(100);
 
-  if (error || !tokens) return [];
+  if (error || !logs) return [];
 
   // Group into 5-minute buckets
   const buckets = new Map<string, { granted: number; denied: number }>();
-  tokens.forEach(token => {
-    const date = new Date(token.created_at);
+  logs.forEach(log => {
+    const date = new Date(log.timestamp);
     const minutes = Math.floor(date.getMinutes() / 5) * 5;
     const bucket = `${date.getHours()}:${minutes.toString().padStart(2, '0')}`;
     
@@ -147,10 +147,11 @@ export async function fetchTrafficStats() {
     }
     const stats = buckets.get(bucket)!;
     
-    if (token.is_revoked) {
-      stats.denied++;
-    } else {
+    // Status code 2xx = granted, 4xx/5xx = denied
+    if (log.status_code >= 200 && log.status_code < 300) {
       stats.granted++;
+    } else {
+      stats.denied++;
     }
   });
 

@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid } from "recharts";
 import { useSupabaseData } from "../hooks/useSupabaseData";
+import { fetchUsageStats, fetchTrafficStats } from "../lib/supabase-queries";
 
 // --- Quick notes ---
 // One-file, drop-in React dashboard for your hackathon demo.
@@ -242,12 +243,14 @@ export default function AgentIdpDashboard() {
   const [attackActive, setAttackActive] = useState(false);
   
   // Fetch data from Supabase (falls back to mock if not configured)
-  const { tokenRequests, signinAttempts, agents, useMockData } = useSupabaseData();
+  const { tokenRequests, signinAttempts, agents, useMockData, refreshData } = useSupabaseData();
   
   // Use Supabase data if available, otherwise use mock data
   const [requests, setRequests] = useState<any[]>([]);
   const [signinAttemptsList, setSigninAttemptsList] = useState<any[]>([]);
   const [availableAgents, setAvailableAgents] = useState<any[]>([]);
+  const [usageData, setUsageData] = useState<any[]>([]);
+  const [trafficData, setTrafficData] = useState<any[]>([]);
   
   useEffect(() => {
     if (!useMockData && tokenRequests.length > 0) {
@@ -272,6 +275,32 @@ export default function AgentIdpDashboard() {
       setAvailableAgents(MOCK_AGENTS);
     }
   }, [agents, useMockData]);
+
+  // Fetch usage and traffic stats
+  useEffect(() => {
+    if (useMockData) {
+      setUsageData(MOCK_USAGE);
+      setTrafficData(MOCK_TRAFFIC);
+      return;
+    }
+
+    async function loadStats() {
+      try {
+        const [usage, traffic] = await Promise.all([
+          fetchUsageStats(),
+          fetchTrafficStats(),
+        ]);
+        setUsageData(usage);
+        setTrafficData(traffic);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+        setUsageData(MOCK_USAGE);
+        setTrafficData(MOCK_TRAFFIC);
+      }
+    }
+
+    loadStats();
+  }, [useMockData]);
 
   function simulateAttack() {
     // toggle attack: when activated, prepend a few malicious requests to the stream
@@ -407,7 +436,7 @@ else DENY`
                 onChange={(e) => setAgent(e.target.value as any)}
                 className="border border-indigo-500/30 rounded-xl px-3 py-2 bg-slate-900/40 text-indigo-100 placeholder-indigo-300/50 backdrop-blur"
               >
-                <option value="ALL">All agents</option>
+                <option value="ALL">All data sources</option>
                 {availableAgents.map((a) => (
                   <option key={a.id} value={a.name}>
                     {a.name}
@@ -428,13 +457,13 @@ else DENY`
             >
               {attackActive ? 'Stop Attack' : 'Play Attack'}
             </button>
-            {useMockData && (
+            {!useMockData && (
               <button
-                onClick={() => window.location.reload()}
-                className="ml-2 px-3 py-2 rounded-xl text-sm font-medium border bg-yellow-600 text-white border-yellow-700"
-                title="Refresh to load Supabase data"
+                onClick={() => refreshData()}
+                className="ml-2 px-3 py-2 rounded-xl text-sm font-medium border bg-green-600 text-white border-green-700"
+                title="Refresh data from Supabase"
               >
-                🔄 Refresh Data
+                🔄 Refresh
               </button>
             )}
           </div>
@@ -457,7 +486,7 @@ else DENY`
             </div>
             <div className="h-48 mt-3">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={MOCK_TRAFFIC}>
+                <AreaChart data={trafficData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="t" stroke="#c7d2fe" tick={{ fill: "#c7d2fe" }} />
                   <YAxis allowDecimals={false} stroke="#c7d2fe" tick={{ fill: "#c7d2fe" }} />
@@ -476,7 +505,7 @@ else DENY`
             </div>
             <div className="h-48 mt-3">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={MOCK_USAGE}>
+                <BarChart data={usageData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="resource" tick={{ fontSize: 12, fill: "#c7d2fe" }} />
                   <YAxis tick={{ fill: "#c7d2fe" }} />
