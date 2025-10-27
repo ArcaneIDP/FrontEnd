@@ -253,9 +253,12 @@ export default function AgentIdpDashboard() {
   const [trafficData, setTrafficData] = useState<any[]>([]);
   
   useEffect(() => {
-    if (!useMockData && tokenRequests.length > 0) {
+    if (!useMockData) {
       setRequests(tokenRequests);
-    } else if (useMockData) {
+      console.log('📊 Token requests from Supabase:', tokenRequests.length, 'total');
+      console.log('   Granted:', tokenRequests.filter(r => r.decision === 'GRANTED').length);
+      console.log('   Denied:', tokenRequests.filter(r => r.decision === 'DENIED').length);
+    } else {
       setRequests(MOCK_TOKEN_REQUESTS);
     }
   }, [tokenRequests, useMockData]);

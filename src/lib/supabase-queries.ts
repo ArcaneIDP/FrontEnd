@@ -6,7 +6,7 @@ export async function fetchEphemeralTokens() {
   
   const { data, error } = await supabase
     .from('ephemeral_tokens')
-    .select('*, data_sources!inner(id, name), user_api_tokens!left(id, name)')
+    .select('*, data_sources!left(id, name), user_api_tokens!left(id, name)')
     .order('created_at', { ascending: false })
     .limit(100);
 
