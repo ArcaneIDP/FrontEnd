@@ -135,10 +135,6 @@ export async function fetchTrafficStats() {
 
   if (error || !logs || logs.length === 0) return [];
 
-  // Get the time range
-  const firstTime = new Date(logs[0].timestamp);
-  const lastTime = new Date(logs[logs.length - 1].timestamp);
-  
   // Group into 5-minute buckets with accurate time labels
   const buckets = new Map<string, { granted: number; denied: number }>();
   
