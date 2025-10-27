@@ -122,16 +122,33 @@ export async function fetchUsageStats() {
 }
 
 // Get traffic statistics for the area chart (based on audit_logs)
-export async function fetchTrafficStats() {
+export async function fetchTrafficStats(timeRange: string = "12h") {
   if (!supabase) return [];
 
-  // Get audit logs grouped by timestamp (last 60 minutes, 5-minute intervals)
+  // Calculate time range in milliseconds
+  const timeRanges: Record<string, number> = {
+    "5m": 5 * 60 * 1000,
+    "30m": 30 * 60 * 1000,
+    "1h": 60 * 60 * 1000,
+    "8h": 8 * 60 * 60 * 1000,
+    "12h": 12 * 60 * 60 * 1000,
+    "24h": 24 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
+  };
+
+  const timeRangeMs = timeRanges[timeRange] || timeRanges["12h"];
+  const bucketSizeMinutes = timeRange.includes("d") ? 
+    (timeRange === "7d" ? 60 : 240) : 
+    (timeRange === "5m" ? 1 : timeRange === "30m" ? 5 : timeRange === "1h" ? 5 : 30);
+
+  // Get audit logs grouped by timestamp
   const { data: logs, error } = await supabase
     .from('audit_logs')
     .select('timestamp, status_code')
-    .gte('timestamp', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+    .gte('timestamp', new Date(Date.now() - timeRangeMs).toISOString())
     .order('timestamp', { ascending: true })
-    .limit(100);
+    .limit(1000);
 
   if (error || !logs || logs.length === 0) return [];
 
@@ -140,13 +157,27 @@ export async function fetchTrafficStats() {
   
   logs.forEach(log => {
     const date = new Date(log.timestamp);
-    const minutes = Math.floor(date.getMinutes() / 5) * 5;
-    const hour24 = date.getHours();
+    let bucketKey: string;
     
-    // Convert to 12-hour format
-    const hour12 = hour24 % 12 || 12;
-    const ampm = hour24 >= 12 ? 'PM' : 'AM';
-    const bucketKey = `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    if (timeRange.includes("d")) {
+      // For days, show date
+      const dayName = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      bucketKey = dayName;
+    } else if (timeRange === "12h" || timeRange === "24h" || timeRange === "8h") {
+      // For hours, show hour:minute
+      const minutes = Math.floor(date.getMinutes() / bucketSizeMinutes) * bucketSizeMinutes;
+      const hour24 = date.getHours();
+      const hour12 = hour24 % 12 || 12;
+      const ampm = hour24 >= 12 ? 'PM' : 'AM';
+      bucketKey = `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    } else {
+      // For minutes, show hour:minute
+      const minutes = Math.floor(date.getMinutes() / bucketSizeMinutes) * bucketSizeMinutes;
+      const hour24 = date.getHours();
+      const hour12 = hour24 % 12 || 12;
+      const ampm = hour24 >= 12 ? 'PM' : 'AM';
+      bucketKey = `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    }
     
     if (!buckets.has(bucketKey)) {
       buckets.set(bucketKey, { granted: 0, denied: 0 });
@@ -161,10 +192,17 @@ export async function fetchTrafficStats() {
     }
   });
 
-  // Convert to array and sort by time (keep 24-hour for sorting)
+  // Convert to array and sort by time
   const sortedBuckets = Array.from(buckets.entries())
     .sort(([a], [b]) => {
-      // Extract hour and min from display format (e.g., "4:50 PM")
+      // If it's a date string, sort chronologically
+      if (timeRange.includes("d")) {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA.getTime() - dateB.getTime();
+      }
+      
+      // Otherwise, parse time format (e.g., "4:50 PM")
       const [aTime, aAmPm] = a.split(' ');
       const [bTime, bAmPm] = b.split(' ');
       const [aHour, aMin] = aTime.split(':').map(Number);

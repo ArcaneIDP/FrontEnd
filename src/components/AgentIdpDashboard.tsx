@@ -240,6 +240,7 @@ export default function AgentIdpDashboard() {
   const [query, setQuery] = useState("");
   const [agent, setAgent] = useState<string | "ALL">("ALL");
   const [detail, setDetail] = useState<any | null>(null);
+  const [timeRange, setTimeRange] = useState<string>("12h");
   
   // Fetch data from Supabase (falls back to mock if not configured)
   const { tokenRequests, signinAttempts, agents, useMockData } = useSupabaseData();
@@ -287,7 +288,7 @@ export default function AgentIdpDashboard() {
       try {
         const [usage, traffic] = await Promise.all([
           fetchUsageStats(),
-          fetchTrafficStats(),
+          fetchTrafficStats(timeRange),
         ]);
         setUsageData(usage);
         setTrafficData(traffic);
@@ -299,7 +300,7 @@ export default function AgentIdpDashboard() {
     }
 
     loadStats();
-  }, [useMockData]);
+  }, [useMockData, timeRange]);
 
   const filteredReqs = useMemo(() => {
     const q = query.toLowerCase();
@@ -387,8 +388,24 @@ else DENY`
           <div className="md:col-span-3 rounded-2xl border border-indigo-500/20 bg-slate-900/40 backdrop-blur p-4 shadow-lg">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Requests over time</h2>
-              <div className="text-xs text-indigo-200/70">
-                {useMockData ? 'demo data' : `${trafficData.length} time buckets`}
+              <div className="flex items-center gap-2">
+                <select 
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  className="border border-indigo-500/30 rounded-lg px-2 py-1 bg-slate-900/40 text-xs text-indigo-100"
+                >
+                  <option value="5m">Last 5 min</option>
+                  <option value="30m">Last 30 min</option>
+                  <option value="1h">Last 1 hour</option>
+                  <option value="8h">Last 8 hours</option>
+                  <option value="12h">Last 12 hours</option>
+                  <option value="24h">Last 24 hours</option>
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d">Last 30 days</option>
+                </select>
+                <div className="text-xs text-indigo-200/70">
+                  {trafficData.length} points
+                </div>
               </div>
             </div>
             <div className="h-48 mt-3">
