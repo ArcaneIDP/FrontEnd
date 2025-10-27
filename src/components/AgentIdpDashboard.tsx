@@ -482,17 +482,33 @@ else DENY`
           <div className="md:col-span-3 rounded-2xl border border-indigo-500/20 bg-slate-900/40 backdrop-blur p-4 shadow-lg">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Requests over time</h2>
-              <div className="text-xs text-indigo-200/70">demo data</div>
+              <div className="text-xs text-indigo-200/70">
+                {useMockData ? 'demo data' : `${trafficData.length} time buckets`}
+              </div>
             </div>
             <div className="h-48 mt-3">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trafficData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="t" stroke="#c7d2fe" tick={{ fill: "#c7d2fe" }} />
-                  <YAxis allowDecimals={false} stroke="#c7d2fe" tick={{ fill: "#c7d2fe" }} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="granted" stroke="#6366F1" fill="#6366F133" name="granted" />
-                  <Area type="monotone" dataKey="denied" stroke="#A855F7" fill="#A855F733" name="denied" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#6366F1" opacity={0.1} />
+                  <XAxis dataKey="t" stroke="#c7d2fe" tick={{ fill: "#c7d2fe", fontSize: 11 }} />
+                  <YAxis allowDecimals={false} stroke="#c7d2fe" tick={{ fill: "#c7d2fe", fontSize: 11 }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '8px' }}
+                    labelStyle={{ color: '#c7d2fe', fontSize: '12px', marginBottom: '4px' }}
+                    itemStyle={{ color: '#ffffff', fontSize: '13px' }}
+                  />
+                  <Area type="monotone" dataKey="granted" stroke="#6366F1" fill="url(#colorGranted)" name="Granted" />
+                  <Area type="monotone" dataKey="denied" stroke="#A855F7" fill="url(#colorDenied)" name="Denied" />
+                  <defs>
+                    <linearGradient id="colorGranted" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366F1" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#6366F1" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorDenied" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#A855F7" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#A855F7" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -500,17 +516,35 @@ else DENY`
 
           <div className="md:col-span-2 rounded-2xl border border-indigo-500/20 bg-slate-900/40 backdrop-blur p-4 shadow-lg">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Top resources / APIs</h2>
-              <div className="text-xs text-indigo-200/70">demo data</div>
+              <h2 className="font-semibold">Top scopes / APIs</h2>
+              <div className="text-xs text-indigo-200/70">
+                {useMockData ? 'demo data' : `${usageData.length} scopes`}
+              </div>
             </div>
             <div className="h-48 mt-3">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={usageData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="resource" tick={{ fontSize: 12, fill: "#c7d2fe" }} />
-                  <YAxis tick={{ fill: "#c7d2fe" }} />
-                  <Tooltip />
-                  <Bar dataKey="calls" fill="#6366F1" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#6366F1" opacity={0.1} />
+                  <XAxis 
+                    dataKey="resource" 
+                    tick={{ fontSize: 11, fill: "#c7d2fe" }} 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis tick={{ fill: "#c7d2fe", fontSize: 11 }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '8px' }}
+                    labelStyle={{ color: '#c7d2fe', fontSize: '12px', marginBottom: '4px' }}
+                    itemStyle={{ color: '#ffffff', fontSize: '13px' }}
+                  />
+                  <Bar dataKey="calls" fill="url(#colorBar)" radius={[8, 8, 0, 0]} />
+                  <defs>
+                    <linearGradient id="colorBar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366F1" stopOpacity={1}/>
+                      <stop offset="100%" stopColor="#818CF8" stopOpacity={0.8}/>
+                    </linearGradient>
+                  </defs>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -522,7 +556,9 @@ else DENY`
           <div className="rounded-2xl border border-indigo-500/20 bg-slate-900/40 backdrop-blur p-4 shadow-lg">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold">Live token requests</h2>
-              <div className="text-xs text-indigo-200/70">least-privilege evaluation</div>
+              <div className="text-xs text-indigo-200/70">
+                {filteredReqs.length} {filteredReqs.length === 1 ? 'request' : 'requests'} • real-time
+              </div>
             </div>
             <div className="overflow-auto">
               <table className="w-full text-sm">
@@ -567,7 +603,9 @@ else DENY`
           <div className="rounded-2xl border border-indigo-500/20 bg-slate-900/40 backdrop-blur p-4 shadow-lg">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold">Auth attempts</h2>
-              <div className="text-xs text-indigo-200/70">mTLS / OIDC clients</div>
+              <div className="text-xs text-indigo-200/70">
+                {signinAttemptsList.length} {signinAttemptsList.length === 1 ? 'attempt' : 'attempts'} • real-time
+              </div>
             </div>
             <div className="overflow-auto">
               <table className="w-full text-sm">
