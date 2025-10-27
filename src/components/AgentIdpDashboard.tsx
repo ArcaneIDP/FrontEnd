@@ -347,10 +347,9 @@ else DENY`
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Arcane Security</h1>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Arcane Secuity : Identity provider for AI agents</h1>
             <p className="text-sm text-indigo-200/80 mt-1">
               30-second, purpose-scoped tokens * Just-in-time access * Full audit trail
-              : Identity provider for AI agents
             </p>
           </div>
           <div className="flex items-center gap-3">
