@@ -145,8 +145,12 @@ export async function fetchTrafficStats() {
   logs.forEach(log => {
     const date = new Date(log.timestamp);
     const minutes = Math.floor(date.getMinutes() / 5) * 5;
-    const hours = date.getHours();
-    const bucketKey = `${hours}:${minutes.toString().padStart(2, '0')}`;
+    const hour24 = date.getHours();
+    
+    // Convert to 12-hour format
+    const hour12 = hour24 % 12 || 12;
+    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+    const bucketKey = `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
     
     if (!buckets.has(bucketKey)) {
       buckets.set(bucketKey, { granted: 0, denied: 0 });
@@ -161,12 +165,20 @@ export async function fetchTrafficStats() {
     }
   });
 
-  // Convert to array and sort by time
+  // Convert to array and sort by time (keep 24-hour for sorting)
   const sortedBuckets = Array.from(buckets.entries())
     .sort(([a], [b]) => {
-      const [aHour, aMin] = a.split(':').map(Number);
-      const [bHour, bMin] = b.split(':').map(Number);
-      if (aHour !== bHour) return aHour - bHour;
+      // Extract hour and min from display format (e.g., "4:50 PM")
+      const [aTime, aAmPm] = a.split(' ');
+      const [bTime, bAmPm] = b.split(' ');
+      const [aHour, aMin] = aTime.split(':').map(Number);
+      const [bHour, bMin] = bTime.split(':').map(Number);
+      
+      // Convert to 24-hour for proper sorting
+      const aHour24 = aAmPm === 'PM' && aHour !== 12 ? aHour + 12 : (aAmPm === 'AM' && aHour === 12 ? 0 : aHour);
+      const bHour24 = bAmPm === 'PM' && bHour !== 12 ? bHour + 12 : (bAmPm === 'AM' && bHour === 12 ? 0 : bHour);
+      
+      if (aHour24 !== bHour24) return aHour24 - bHour24;
       return aMin - bMin;
     });
 
