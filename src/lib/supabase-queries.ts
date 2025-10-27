@@ -133,19 +133,25 @@ export async function fetchTrafficStats() {
     .order('timestamp', { ascending: true })
     .limit(100);
 
-  if (error || !logs) return [];
+  if (error || !logs || logs.length === 0) return [];
 
-  // Group into 5-minute buckets
+  // Get the time range
+  const firstTime = new Date(logs[0].timestamp);
+  const lastTime = new Date(logs[logs.length - 1].timestamp);
+  
+  // Group into 5-minute buckets with accurate time labels
   const buckets = new Map<string, { granted: number; denied: number }>();
+  
   logs.forEach(log => {
     const date = new Date(log.timestamp);
     const minutes = Math.floor(date.getMinutes() / 5) * 5;
-    const bucket = `${date.getHours()}:${minutes.toString().padStart(2, '0')}`;
+    const hours = date.getHours();
+    const bucketKey = `${hours}:${minutes.toString().padStart(2, '0')}`;
     
-    if (!buckets.has(bucket)) {
-      buckets.set(bucket, { granted: 0, denied: 0 });
+    if (!buckets.has(bucketKey)) {
+      buckets.set(bucketKey, { granted: 0, denied: 0 });
     }
-    const stats = buckets.get(bucket)!;
+    const stats = buckets.get(bucketKey)!;
     
     // Status code 2xx = granted, 4xx/5xx = denied
     if (log.status_code >= 200 && log.status_code < 300) {
@@ -155,7 +161,16 @@ export async function fetchTrafficStats() {
     }
   });
 
-  return Array.from(buckets.entries()).map(([t, stats]) => ({
+  // Convert to array and sort by time
+  const sortedBuckets = Array.from(buckets.entries())
+    .sort(([a], [b]) => {
+      const [aHour, aMin] = a.split(':').map(Number);
+      const [bHour, bMin] = b.split(':').map(Number);
+      if (aHour !== bHour) return aHour - bHour;
+      return aMin - bMin;
+    });
+
+  return sortedBuckets.map(([t, stats]) => ({
     t,
     granted: stats.granted,
     denied: stats.denied,
